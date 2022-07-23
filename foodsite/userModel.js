@@ -29,7 +29,7 @@ const userSchema=new mongoose.Schema({
     },
     phonenumber:{
         type:String,
-        minLength:10,
+        minLength:[10,"If length is <10 then this error will show up"],
         maxLength:10
     },
     pic:{
