@@ -51,6 +51,9 @@ const userSchema=new mongoose.Schema({
             message: "password mismatch"
         },
     },
+    otp:{
+        type:String
+    },
     address:{
         type:String,
 

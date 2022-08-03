@@ -18,6 +18,11 @@ app.post('/signup', (req, res) => {
     res.end("data received");
 })
 
+
+
+
+
+
 app.post('/login', (req, res) => {
     let { email, password } = req.body;
     console.log(email + " " + password);
@@ -55,9 +60,49 @@ app.post('/login', (req, res) => {
 
 })
 
+
+
+
+app.patch('/forgetpassword', async (req,res)=>{
+  try{
+    let {email}=req.body;
+    let otp=otpgenerator();
+    let user=await userModel.findOneAndUpdate({email},{otp:otp},{new:true});
+    console.log(user);
+    res.send(
+        {
+            data:user,
+            message:"Otp sent to your mail"
+        }
+    )
+
+  }
+  catch(err){
+    res.end(err);
+  }
+
+     
+})
+
+app.patch("/resetpassword", async (req,res)=>{
+    try{
+        let {otp , password , confirmPassword } = req.body;
+        //validators in model run only after putting runValidator:true
+        let user=userModel.findOneAndUpdate({otp},{password,confirmPassword,otp:undefined},{runValidators:true},{new:true});
+        res.json({
+            data:user,
+            message:"Password for the user is reset"
+        })
+
+    }
+    catch(err){
+        res.end(err.message);
+    }
+})
+
 //get all users
 //protectRoute is a middleware which will be responsible for some checks from the request itself
-//we can append N number od 
+//we can append N number of middlewares with next()
 app.get("/users", protectRoute, (req, res) => {
     userModel.find({}, (err, users) => {
         if (err) {
@@ -66,6 +111,13 @@ app.get("/users", protectRoute, (req, res) => {
         res.end(JSON.stringify(users));
     })
 });
+
+
+
+
+
+
+
 app.get("/user", protectRoute, async function (req, res) {
     // user profile ka data show 
     try {
@@ -84,6 +136,13 @@ app.get("/user", protectRoute, async function (req, res) {
     }
 
 })
+
+
+
+
+
+
+
 
 
 function protectRoute(req, res, next) {
@@ -113,6 +172,10 @@ function protectRoute(req, res, next) {
             res.send(err.message);
         }
     }
+
+}
+function otpgenerator(){
+    return Math.floor(100000+Math.random()* 900000);
 
 }
 
