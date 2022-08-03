@@ -1,73 +1,124 @@
-const express=require("express");
-const app=express();
-const userModel=require("./userModel");
-const cookieParser=require("cookie-parser");
+const express = require("express");
+const jwt=require("jsonwebtoken");
+const secrets=require("./sercets");
+const app = express();
+const userModel = require("./userModel");
+const cookieParser = require("cookie-parser");
 app.use(express.json());
 app.use(cookieParser());
 //we will use JWT web tokken
 //home work create user , delete user etc etc 
-app.post('/signup',(req,res)=>{
+app.post('/signup', (req, res) => {
 
-    let data=req.body;
+    let data = req.body;
     console.log(data);
-    userModel.create((data),(err,newUser)=>{
+    userModel.create((data), (err, newUser) => {
         console.log("hello11111");
     });
     res.end("data received");
 })
 
-app.post('/login',(req,res)=>{
-    let{email,password}=req.body;
-    console.log(email+" "+password);
-if(email&&password){
-        userModel.findOne({email:email},(err,user)=>{
-        if(err){
-         return  res.end("Invalid user/ password");
-         
-        }
-        if(user){
-            if(user.password==password){
-                // res.cookie("toksken","this is my tokken");   
-                return res.end("Loggesssssd in successfully");
-              
-               
+app.post('/login', (req, res) => {
+    let { email, password } = req.body;
+    console.log(email + " " + password);
+    if (email && password) {
+        userModel.findOne({ email: email }, (err, user) => {
+            if (err) {
+                return res.end("Invalid user/ password");
+
             }
-            return  res.end("Password entered is wrong ");
-                
-            
-            
-        }
-    })
-}else{
+            if (user) {
+                if (user.password == password) {
+                    const token = jwt.sign({
+                        data: user["_id"],
+                        exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24)
+                    }, secrets.JWTSECRET);
+                    // put token into cookies
+                    res.cookie("JWT", token);
+                    return res.end("Loggesssssd in successfully");
 
-    return res.end("Kindly enter email and password both");
-}
+
+                }
+                return res.end("Password entered is wrong ");
 
 
-    
+
+            }
+        })
+    } else {
+
+        return res.end("Kindly enter email and password both");
+    }
+
+
+
 
 })
 
 //get all users
 //protectRoute is a middleware which will be responsible for some checks from the request itself
-app.get("/users",protectRoute,(req,res)=>{
-    userModel.find({},(err,users)=>{
-        if(err){
+//we can append N number od 
+app.get("/users", protectRoute, (req, res) => {
+    userModel.find({}, (err, users) => {
+        if (err) {
             res.end("Error in accessing users");
         }
         res.end(JSON.stringify(users));
     })
 });
+app.get("/user", protectRoute, async function (req, res) {
+    // user profile ka data show 
+    try {
+        const userId = req.userId;
+        const user = await userModel.findById(userId);
+        res.json({
+            data: user,
+            message: "Data about logged in user is send"
+        });
+        // model by Id -> get
+        // res-> send 
+    } catch (err) {
+        console.log("Reached here");
+        res.end(err.message);
 
-function protectRoute(req,res,next){
-    // req.cookie("token","sample tokken");
-console.log(req.cookies);
-next();
+    }
+
+})
+
+
+function protectRoute(req, res, next) {
+    try {
+        const cookies = req.cookies;
+        const JWT = cookies.JWT;
+        if (cookies.JWT) {
+            console.log("protect Route Encountered");
+            // you are logged In then it will 
+            // allow next fn to run
+            let token = jwt.verify(JWT, secrets.JWTSECRET);
+            console.log("Jwt decrypted", token);
+            let userId = token.data
+            console.log("userId",userId);
+            req.userId = userId;
+
+            next();
+        } else {
+            res.send("You are not logged In Kindly Login");
+        }
+    } catch (err) {
+        console.log(err);
+        if (err.message == "invalid signature") {
+            res.send("Token invalid kindly login");
+        } else {
+
+            res.send(err.message);
+        }
+    }
+
 }
 
 
-app.listen(3000,(err)=>{
-    if(err){
+app.listen(3000, (err) => {
+    if (err) {
         console.log("Error");
         return;
     }
